@@ -7,6 +7,7 @@ import (
     "time"
 )
 
+// Globals
 var (
     stations          map[string]*Station
     lines             map[string]*ServiceLine
@@ -14,6 +15,7 @@ var (
     simulationMode    bool
     simulationWeekMin int
     simulationSleepMs int
+    fcgiAddr          string
     dataDir           string
 )
 
@@ -76,17 +78,24 @@ type Train struct {
     Lon         float64
 }
 
+// Program entry point
 func main() {
     // Flags
     flag.BoolVar(&simulationMode, "s", true, "enable simulation mode")
     flag.IntVar(&simulationSleepMs, "m", 100, "num ms to sleep in simulation mode")
     flag.IntVar(&simulationWeekMin, "w", 0, "weekMin to start at in simulation mode")
     flag.StringVar(&dataDir, "d", "../res", "data directory")
+    flag.StringVar(&fcgiAddr, "f", ":9000", "fcgi listen address")
     flag.Parse()
     simulationWeekMin -= 1
 
     // Parse data
     if err := buildResources(dataDir); err != nil {
+        panic(err)
+    }
+
+    // Start fcgi server
+    if err := startFcgi(); err != nil {
         panic(err)
     }
 
@@ -99,18 +108,19 @@ func main() {
             // Check for station stops that just occurred
             for _, line := range lines {
                 for _, stop := range line.GetStationStops(weekMin) {
-                    fmt.Printf("[%s] Line %s stop at %s\n", weekMinToStr(weekMin), stop.Platform.ServiceLine.Name, stop.Platform.Station.Name)
+                    platform := stop.Platform
+                    fmt.Printf("[%s] Line %s stop at %s\n", weekMinToStr(weekMin), platform.ServiceLine.Name, platform.Station.Name)
                     // Move train form previous platform this platform
                     var train *Train
-                    if train = stop.Platform.Prev.DequeueTrain(weekMin); train == nil {
+                    if train = platform.Prev.DequeueTrain(weekMin); train == nil {
                         // No train was there, so make a new train!
-                        train = getOrCreateNewTrain(stop.Platform.Station)
+                        train = getOrCreateNewTrain(platform.Station)
                     }
                     train.CurStop = stop
                     train.CurProgress = 0.0
                     train.Terminated = train.CurStop.Next == nil
                     train.Updated = weekMin
-                    stop.Platform.PushTrain(train)
+                    platform.PushTrain(train)
                 }
             }
             lastWeekMin = weekMin
@@ -144,7 +154,7 @@ func getOrCreateNewTrain(station *Station) *Train {
     return train
 }
 
-// Get current minute of week
+// Get current minute of week, or increment simulationWeekMin in simulationMode
 func getCurWeekMin() int {
     if simulationMode {
         simulationWeekMin += 1
@@ -257,6 +267,7 @@ func (a *Waypoint) DistanceTo(b *Waypoint) float64 {
             math.Pow(b.Lon-a.Lon, 2))
 }
 
+// Convert weekMin to string
 func weekMinToStr(weekMin int) string {
     day := weekMin / 1440
     dayMin := weekMin % 1440
