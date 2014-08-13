@@ -1,43 +1,43 @@
 package main
 
 import (
-    "time"
-    "math"
     "flag"
     "fmt"
+    "math"
+    "time"
 )
 
 var (
-    stations map[string]*Station
-    lines map[string]*ServiceLine
-    trains []*Train
-    simulationMode bool
+    stations          map[string]*Station
+    lines             map[string]*ServiceLine
+    trains            []*Train
+    simulationMode    bool
     simulationWeekMin int
     simulationSleepMs int
-    dataDir string
+    dataDir           string
 )
 
 // A station (e.g., WTC)
 type Station struct {
     Name string
-    Id string
-    Lat float64
-    Lon float64
+    Id   string
+    Lat  float64
+    Lon  float64
 }
 
 // A service line (e.g., Newark-WTC)
 type ServiceLine struct {
-    Name string
-    Id string
-    Color1 string
-    Color2 string
-    Platforms []*StationPlatform
-    Waypoints []*Waypoint
+    Name          string
+    Id            string
+    Color1        string
+    Color2        string
+    Platforms     []*StationPlatform
+    Waypoints     []*Waypoint
     TotalDistance float64
-    StationStops []*StationStop
-    Route []interface{} // For json decode
-    WeeklySched []int // For json decode
-    Stops []string // For json decode
+    StationStops  []*StationStop
+    Route         []interface{} // For json decode
+    WeeklySched   []int         // For json decode
+    Stops         []string      // For json decode
 }
 
 // A station platform (e.g., the WTC-bound platform @ Grove St on the
@@ -46,7 +46,7 @@ type StationPlatform struct {
     *Station
     *ServiceLine
     *Waypoint
-    Prev *StationPlatform
+    Prev   *StationPlatform
     Trains []*Train
 }
 
@@ -54,26 +54,26 @@ type StationPlatform struct {
 // Grove St)
 type StationStop struct {
     Platform *StationPlatform
-    Next *StationStop
-    WeekMin int // minute of week (0 thru 10079)
+    Next     *StationStop
+    WeekMin  int // minute of week (0 thru 10079)
 }
 
 // A point on a map with pointers to next/prev points
 type Waypoint struct {
-    Lat float64
-    Lon float64
+    Lat      float64
+    Lon      float64
     Platform *StationPlatform
 }
 
 // A train
 type Train struct {
-    Id int
-    CurStop *StationStop
+    Id          int
+    CurStop     *StationStop
     CurProgress float64
-    Terminated bool
-    Updated int
-    Lat float64
-    Lon float64
+    Terminated  bool
+    Updated     int
+    Lat         float64
+    Lon         float64
 }
 
 func main() {
@@ -86,7 +86,9 @@ func main() {
     simulationWeekMin -= 1
 
     // Parse data
-    if err := buildResources(dataDir); err != nil { panic(err) }
+    if err := buildResources(dataDir); err != nil {
+        panic(err)
+    }
 
     // Run trains
     weekMin := 0
@@ -160,9 +162,9 @@ func getCurWeekMin() int {
 // to 12:01am case
 func weekMinDiff(future, now int) int {
     if future < now {
-        future += 60*24*7
+        future += 60 * 24 * 7
     }
-    return future-now
+    return future - now
 }
 
 // Update progress of trains
@@ -184,20 +186,20 @@ func (train *Train) updatePosition() {
         return
     }
     line := train.CurStop.Platform.ServiceLine
-    targetDistance := train.CurProgress*line.TotalDistance
+    targetDistance := train.CurProgress * line.TotalDistance
 
     distanceTally := 0.0
-    for i := 0; i < len(line.Waypoints) - 1; i += 1 {
+    for i := 0; i < len(line.Waypoints)-1; i += 1 {
         waypoint := line.Waypoints[i]
         nextWaypoint := line.Waypoints[i+1]
         waypointDistance := waypoint.DistanceTo(nextWaypoint)
-        if distanceTally + waypointDistance >= targetDistance {
+        if distanceTally+waypointDistance >= targetDistance {
             baseDistance := distanceTally
             distanceTally += waypointDistance
-            factor := (targetDistance-baseDistance)/(distanceTally-baseDistance)
+            factor := (targetDistance - baseDistance) / (distanceTally - baseDistance)
             // TODO This does not take into account Earth curvature
-            train.Lat = (nextWaypoint.Lat+waypoint.Lat)*factor
-            train.Lon = (nextWaypoint.Lon+waypoint.Lon)*factor
+            train.Lat = (nextWaypoint.Lat + waypoint.Lat) * factor
+            train.Lon = (nextWaypoint.Lon + waypoint.Lon) * factor
             return
         }
     }
@@ -251,8 +253,8 @@ func (line *ServiceLine) GetStationStops(weekMin int) []*StationStop {
 func (a *Waypoint) DistanceTo(b *Waypoint) float64 {
     // TODO This does not take into account Earth curvature
     return math.Sqrt(
-        math.Pow(b.Lat - a.Lat, 2) +
-        math.Pow(b.Lon - a.Lon, 2))
+        math.Pow(b.Lat-a.Lat, 2) +
+            math.Pow(b.Lon-a.Lon, 2))
 }
 
 func weekMinToStr(weekMin int) string {

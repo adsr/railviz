@@ -1,13 +1,13 @@
 package main
 
 import (
-    "fmt"
-    "path/filepath"
     "encoding/json"
     "errors"
-    "strings"
-    "strconv"
+    "fmt"
     "os"
+    "path/filepath"
+    "strconv"
+    "strings"
 )
 
 type routePoint struct {
@@ -21,15 +21,23 @@ func buildResources(path string) error {
 
     // Stations
     stationFiles, err := filepath.Glob(fmt.Sprintf("%s/stations/%s", path, "*"))
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     err = buildStations(stationFiles)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
 
     // Lines
     lineFiles, err := filepath.Glob(fmt.Sprintf("%s/lines/%s", path, "*"))
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     err = buildServiceLines(lineFiles)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
 
     return nil
 }
@@ -40,7 +48,9 @@ func buildStations(files []string) error {
     for _, file := range files {
         err := func() error {
             fd, err := os.Open(file)
-            if err != nil { return err }
+            if err != nil {
+                return err
+            }
             defer fd.Close()
             station := new(Station)
             decoder := json.NewDecoder(fd)
@@ -50,7 +60,9 @@ func buildStations(files []string) error {
             stations[station.Id] = station
             return nil
         }()
-        if err != nil { return err }
+        if err != nil {
+            return err
+        }
     }
     return nil
 }
@@ -61,17 +73,27 @@ func buildServiceLines(files []string) error {
     for _, file := range files {
         err := func() error {
             fd, err := os.Open(file)
-            if err != nil { return err }
+            if err != nil {
+                return err
+            }
             defer fd.Close()
             line := new(ServiceLine)
             decoder := json.NewDecoder(fd)
-            if err = decoder.Decode(line); err != nil { return err }
-            if err = line.parseRoute(); err != nil { return err }
-            if err = line.parseSched(); err != nil { return err }
+            if err = decoder.Decode(line); err != nil {
+                return err
+            }
+            if err = line.parseRoute(); err != nil {
+                return err
+            }
+            if err = line.parseSched(); err != nil {
+                return err
+            }
             lines[line.Id] = line
             return nil
         }()
-        if err != nil { return err }
+        if err != nil {
+            return err
+        }
     }
     return nil
 }
@@ -83,7 +105,7 @@ func (line *ServiceLine) parseSched() error {
     lastHour := -1
     var hour, adjHour, min int
     var err error
-    for _, stop := range(line.Stops) {
+    for _, stop := range line.Stops {
         hourMin := strings.SplitN(stop, ":", 2)
         if len(hourMin) != 2 {
             return errors.New("Expected h:mm or hh:mm format")
@@ -104,7 +126,7 @@ func (line *ServiceLine) parseSched() error {
             adjHour += 12
         }
         lastHour = hour
-        dayMins = append(dayMins, adjHour*60 + min)
+        dayMins = append(dayMins, adjHour*60+min)
     }
 
     // Set line.StationStops
@@ -121,10 +143,10 @@ func (line *ServiceLine) parseSched() error {
             if dayMin < startMin && dayMin > endMin {
                 continue
             }
-            platform := line.Platforms[j % len(line.Platforms)]
+            platform := line.Platforms[j%len(line.Platforms)]
             stationStop := &StationStop{
                 Platform: platform,
-                WeekMin: dayMin + (i/2)*1440 }
+                WeekMin:  dayMin + (i/2)*1440}
             if prevStationStop != nil && j%len(line.Platforms) != 0 {
                 prevStationStop.Next = stationStop
             }
@@ -139,16 +161,16 @@ func (line *ServiceLine) parseRoute() error {
     routePoints := []routePoint{}
     for _, route := range line.Route {
         switch val := route.(type) {
-            case string:
-                if station, ok := stations[val]; !ok {
-                    return errors.New(fmt.Sprintf("Invalid station id %s", val, line.Id))
-                } else {
-                    routePoints = append(routePoints, routePoint{Station: station})
-                }
-            case float64:
-                routePoints = append(routePoints, routePoint{Coord: val})
-            default:
-                return errors.New(fmt.Sprintf("Unexpected %T in Waypoints array", val, line.Id))
+        case string:
+            if station, ok := stations[val]; !ok {
+                return errors.New(fmt.Sprintf("Invalid station id %s", val, line.Id))
+            } else {
+                routePoints = append(routePoints, routePoint{Station: station})
+            }
+        case float64:
+            routePoints = append(routePoints, routePoint{Coord: val})
+        default:
+            return errors.New(fmt.Sprintf("Unexpected %T in Waypoints array", val, line.Id))
         }
     }
 
@@ -168,10 +190,10 @@ func (line *ServiceLine) parseRoute() error {
             waypoint.Lat = routePoint.Station.Lat
             waypoint.Lon = routePoint.Station.Lon
             waypoint.Platform = &StationPlatform{
-                Station: routePoint.Station,
+                Station:     routePoint.Station,
                 ServiceLine: line,
-                Waypoint: waypoint,
-                Prev: prevStationPlatform}
+                Waypoint:    waypoint,
+                Prev:        prevStationPlatform}
             waypoint.Platform.Trains = make([]*Train, 0)
             prevStationPlatform = waypoint.Platform
             line.Platforms = append(line.Platforms, waypoint.Platform)
@@ -179,7 +201,7 @@ func (line *ServiceLine) parseRoute() error {
         line.Waypoints = append(line.Waypoints, waypoint)
     }
 
-fmt.Printf("%+v\n", line.Platforms)
+    fmt.Printf("%+v\n", line.Platforms)
 
     // Set line.TotalDistance
     var totalDistance float64
