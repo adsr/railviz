@@ -25,9 +25,7 @@ func startFcgi() error {
         return err
     } else {
         handler := new(FcgiHandler)
-        if err = fcgi.Serve(listener, handler); err != nil {
-            return err
-        }
+        go fcgi.Serve(listener, handler)
     }
     return nil
 }
