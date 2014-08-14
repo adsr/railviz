@@ -12,6 +12,7 @@ type FcgiHandler struct {
 
 // Handle request
 func (s FcgiHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+    resp.Header().Set("Content-Type", "application/json")
     if json, err := json.Marshal(trains); err != nil {
         resp.WriteHeader(http.StatusInternalServerError)
     } else {
