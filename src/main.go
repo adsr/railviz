@@ -18,6 +18,8 @@ var (
     fcgiAddr          string
     httpAddr          string
     dataDir           string
+    timeZone          string
+    timeLocation      *time.Location
 )
 
 // A station (e.g., WTC)
@@ -90,8 +92,16 @@ func main() {
     flag.StringVar(&dataDir, "d", "../res", "data directory")
     flag.StringVar(&fcgiAddr, "f", ":9000", "fcgi listen address")
     flag.StringVar(&httpAddr, "t", ":8181", "http listen address")
+    flag.StringVar(&timeZone, "z", "America/New_York", "time zone to run in")
     flag.Parse()
     simulationWeekMin -= 1
+
+    // Load timezone
+    if tLoc, err := time.LoadLocation(timeZone); err != nil {
+        panic(err)
+    } else {
+        timeLocation = tLoc
+    }
 
     // Parse data
     if err := buildResources(dataDir); err != nil {
@@ -169,7 +179,7 @@ func getCurWeekMin() int {
         }
         return simulationWeekMin
     } else {
-        hour, min, _ := time.Now().Clock()
+        hour, min, _ := time.Now().In(timeLocation).Clock()
         return hour*60 + min
     }
 }
