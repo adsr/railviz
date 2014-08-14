@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript">
+    google.maps.event.addDomListener(window, 'load', function() {
+        var map = new google.maps.Map(
+            document.getElementById("map-canvas"),
+            {
+                center: new google.maps.LatLng(40.753985, -74.093723),
+                zoom: 13
+            }
+        );
+        var trains = {};
+        setInterval(function() {
+            $.getJSON('/railviz', null, function(data) {
+                for (var k in data) if (data.hasOwnProperty(k)) {
+                    var train = null;
+                    if (!trains.hasOwnProperty(k)) {
+                        trains[k] = new google.maps.Marker({
+                            map: map,
+                            title: data[k].LineName,
+                            clickable: false
+                        });
+                    }
+                    trains[k].setPosition({lat: data[k].Lat, lon: data[k].Lon });
+                }
+            });
+        }, 1000);
+    });
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"/>
+  </body>
+</html>
