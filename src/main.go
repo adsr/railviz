@@ -179,8 +179,9 @@ func getCurWeekMin() int {
         }
         return simulationWeekMin
     } else {
-        hour, min, _ := time.Now().In(timeLocation).Clock()
-        return hour*60 + min
+        now := time.Now().In(timeLocation)
+        hour, min, _ := now.Clock()
+        return int(now.Weekday())*1440 + hour*60 + min
     }
 }
 
