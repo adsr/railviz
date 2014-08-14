@@ -133,6 +133,8 @@ func main() {
                     train.CurStop = stop
                     train.LineName = platform.ServiceLine.Name
                     train.LineId = platform.ServiceLine.Id
+                    train.Lat = platform.Station.Lat
+                    train.Lon = platform.Station.Lon
                     train.CurProgress = 0.0
                     train.Terminated = train.CurStop.Next == nil
                     train.Updated = weekMin
