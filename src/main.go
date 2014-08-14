@@ -228,10 +228,13 @@ func (train *Train) updatePosition() {
             train.Lat = waypoint.Lat + (nextWaypoint.Lat-waypoint.Lat)*factor
             train.Lon = waypoint.Lon + (nextWaypoint.Lon-waypoint.Lon)*factor
             return
+        } else {
+            distanceTally += waypointDistance
         }
     }
 
     // This should not happen
+    fmt.Printf("This should not happen\n")
     train.Lat = train.CurStop.Next.Platform.Waypoint.Lat
     train.Lon = train.CurStop.Next.Platform.Waypoint.Lon
 }
