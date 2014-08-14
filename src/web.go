@@ -1,10 +1,10 @@
 package main
 
 import (
+    "encoding/json"
     "net"
     "net/http"
     "net/http/fcgi"
-    "encoding/json"
 )
 
 type FcgiHandler struct {
@@ -19,13 +19,14 @@ func (s FcgiHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
     }
 }
 
-// Start fcgi server
-func startFcgi() error {
+// Start web server
+func startWeb() error {
     if listener, err := net.Listen("tcp", fcgiAddr); err != nil {
         return err
     } else {
         handler := new(FcgiHandler)
         go fcgi.Serve(listener, handler)
+        go http.ListenAndServe(httpAddr, handler)
     }
     return nil
 }

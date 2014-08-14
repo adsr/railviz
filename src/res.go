@@ -201,15 +201,13 @@ func (line *ServiceLine) parseRoute() error {
         line.Waypoints = append(line.Waypoints, waypoint)
     }
 
-    fmt.Printf("%+v\n", line.Platforms)
-
     // Set line.TotalDistance
     var totalDistance float64
     for i, waypoint := range line.Waypoints {
         if i == 0 {
             continue
         }
-        totalDistance += line.Waypoints[i].DistanceTo(waypoint)
+        totalDistance += line.Waypoints[i-1].DistanceTo(waypoint)
     }
     line.TotalDistance = totalDistance
 

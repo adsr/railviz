@@ -16,6 +16,7 @@ var (
     simulationWeekMin int
     simulationSleepMs int
     fcgiAddr          string
+    httpAddr          string
     dataDir           string
 )
 
@@ -70,10 +71,12 @@ type Waypoint struct {
 // A train
 type Train struct {
     Id          int
-    CurStop     *StationStop
+    LineId      string
+    LineName    string
+    CurStop     *StationStop `json:"-"`
     CurProgress float64
     Terminated  bool
-    Updated     int
+    Updated     int `json:"-"`
     Lat         float64
     Lon         float64
 }
@@ -86,6 +89,7 @@ func main() {
     flag.IntVar(&simulationWeekMin, "w", 0, "weekMin to start at in simulation mode")
     flag.StringVar(&dataDir, "d", "../res", "data directory")
     flag.StringVar(&fcgiAddr, "f", ":9000", "fcgi listen address")
+    flag.StringVar(&httpAddr, "t", ":8181", "http listen address")
     flag.Parse()
     simulationWeekMin -= 1
 
@@ -94,8 +98,8 @@ func main() {
         panic(err)
     }
 
-    // Start fcgi server
-    if err := startFcgi(); err != nil {
+    // Start web server(s)
+    if err := startWeb(); err != nil {
         panic(err)
     }
 
@@ -117,6 +121,8 @@ func main() {
                         train = getOrCreateNewTrain(platform.Station)
                     }
                     train.CurStop = stop
+                    train.LineName = platform.ServiceLine.Name
+                    train.LineId = platform.ServiceLine.Id
                     train.CurProgress = 0.0
                     train.Terminated = train.CurStop.Next == nil
                     train.Updated = weekMin
@@ -208,8 +214,8 @@ func (train *Train) updatePosition() {
             distanceTally += waypointDistance
             factor := (targetDistance - baseDistance) / (distanceTally - baseDistance)
             // TODO This does not take into account Earth curvature
-            train.Lat = (nextWaypoint.Lat + waypoint.Lat) * factor
-            train.Lon = (nextWaypoint.Lon + waypoint.Lon) * factor
+            train.Lat = waypoint.Lat + (nextWaypoint.Lat-waypoint.Lat)*factor
+            train.Lon = waypoint.Lon + (nextWaypoint.Lon-waypoint.Lon)*factor
             return
         }
     }
