@@ -7,7 +7,7 @@ import (
     "os"
     "path/filepath"
     "strconv"
-    "strings"
+    "regexp"
 )
 
 type routePoint struct {
@@ -101,31 +101,27 @@ func buildServiceLines(files []string) error {
 func (line *ServiceLine) parseSched() error {
     // Parse stops
     dayMins := make([]int, 0, len(line.Stops))
-    isPm := false
-    lastHour := -1
     var hour, adjHour, min int
     var err error
+    re := regexp.MustCompile("^([0-9]+):([0-9]+)([ap])m?$")
     for _, stop := range line.Stops {
-        hourMin := strings.SplitN(stop, ":", 2)
-        if len(hourMin) != 2 {
-            return errors.New("Expected h:mm or hh:mm format")
+        match := re.FindStringSubmatch(stop)
+        if len(match) < 1 {
+            return errors.New("Expected [hh]:[mm][xm] format")
         }
-        if hour, err = strconv.Atoi(hourMin[0]); err != nil {
+        if hour, err = strconv.Atoi(match[1]); err != nil {
             return errors.New("Expected hour to be a number")
         }
-        if min, err = strconv.Atoi(hourMin[1]); err != nil {
-            return errors.New("Expected min to be a number")
+        if min, err = strconv.Atoi(match[2]); err != nil {
+            return errors.New("Expected min to be a number " + stop)
         }
+        isPm := match[3] == "p"
         adjHour = hour
-        if hour == 12 && lastHour == 11 {
-            isPm = !isPm
-        }
         if !isPm && hour == 12 {
             adjHour = 0
         } else if isPm && hour != 12 {
             adjHour += 12
         }
-        lastHour = hour
         dayMins = append(dayMins, adjHour*60+min)
     }
 
@@ -198,6 +194,7 @@ func (line *ServiceLine) parseRoute() error {
             prevStationPlatform = waypoint.Platform
             line.Platforms = append(line.Platforms, waypoint.Platform)
         }
+        waypoint.Index = len(line.Waypoints)
         line.Waypoints = append(line.Waypoints, waypoint)
     }
 

@@ -20,6 +20,10 @@ var (
     dataDir           string
     timeZone          string
     timeLocation      *time.Location
+    replayMins        int
+    replayStart       int
+    replayStop        int
+    replayCounter     int
 )
 
 // A station (e.g., WTC)
@@ -68,6 +72,7 @@ type Waypoint struct {
     Lat      float64
     Lon      float64
     Platform *StationPlatform
+    Index    int
 }
 
 // A train
@@ -93,8 +98,10 @@ func main() {
     flag.StringVar(&fcgiAddr, "f", ":9000", "fcgi listen address")
     flag.StringVar(&httpAddr, "t", ":8181", "http listen address")
     flag.StringVar(&timeZone, "z", "America/New_York", "time zone to run in")
+    flag.IntVar(&replayMins, "r", 4*60, "num minutes to replay before starting")
     flag.Parse()
     simulationWeekMin -= 1
+    replayStart = -1
 
     // Load timezone
     if tLoc, err := time.LoadLocation(timeZone); err != nil {
@@ -115,10 +122,11 @@ func main() {
 
     // Run trains
     weekMin := 0
-    lastWeekMin := 99
+    weekMinFloat := 0.0
+    lastWeekMin := -1
     for {
         // TODO No idea what is supposed to happen during DST
-        if weekMin = getCurWeekMin(); weekMin != lastWeekMin {
+        if weekMin, weekMinFloat = getCurWeekMin(); weekMin != lastWeekMin {
             // Check for station stops that just occurred
             for _, line := range lines {
                 for _, stop := range line.GetStationStops(weekMin) {
@@ -145,14 +153,16 @@ func main() {
         }
 
         // Update train progress and position
-        updateTrains(weekMin)
+        updateTrains(weekMin, weekMinFloat)
 
         if simulationMode {
             // Sleep a tiny bit
             time.Sleep(time.Duration(simulationSleepMs) * time.Millisecond)
         } else {
             // Sleep a bit
-            time.Sleep(1 * time.Second)
+            if replayMins < 1 {
+                time.Sleep(1 * time.Second)
+            }
         }
     }
 }
@@ -160,8 +170,7 @@ func main() {
 // Get a `Terminated` train at `station` or create a new one
 func getOrCreateNewTrain(station *Station) *Train {
     for _, train := range trains {
-        //if train.Terminated && train.CurStop.Platform.Station == station {
-        if train.Terminated {
+        if train.Terminated && train.CurStop.Platform.Station == station {
             return train
         }
     }
@@ -173,36 +182,52 @@ func getOrCreateNewTrain(station *Station) *Train {
 }
 
 // Get current minute of week, or increment simulationWeekMin in simulationMode
-func getCurWeekMin() int {
+func getCurWeekMin() (int, float64) {
     if simulationMode {
         simulationWeekMin += 1
         if simulationWeekMin >= 10080 {
             simulationWeekMin = 0
         }
-        return simulationWeekMin
+        return simulationWeekMin, float64(simulationWeekMin)
     } else {
         now := time.Now().In(timeLocation)
-        hour, min, _ := now.Clock()
-        return int(now.Weekday())*1440 + hour*60 + min
+        hour, min, sec := now.Clock()
+        weekMin := int(now.Weekday())*1440 + hour*60 + min
+        if replayMins > 0 {
+            if replayStart == -1 {
+                replayStart = weekMin - replayMins
+                for ; replayStart < 0; replayStart += 1440 { }
+                replayStop = weekMin
+                replayCounter = replayStart
+            }
+            if replayCounter == replayStop {
+                replayMins = 0
+            } else {
+                weekMin = replayCounter
+                replayCounter = (replayCounter + 1) % 10080
+            }
+        }
+        weekMinFloat := float64(weekMin) + float64(sec)/60.0
+        return weekMin, weekMinFloat
     }
 }
 
 // Get difference between two `weekMin` values, compensating for the 11:59pm
 // to 12:01am case
-func weekMinDiff(future, now int) int {
+func weekMinDiff(future, now float64) float64 {
     if future < now {
-        future += 60 * 24 * 7
+        future += float64(60 * 24 * 7)
     }
     return future - now
 }
 
 // Update progress of trains
-func updateTrains(weekMin int) {
+func updateTrains(weekMin int, weekMinFloat float64) {
     for _, train := range trains {
         if !train.Terminated {
             // Update progress til next stop
-            train.CurProgress = float64(weekMinDiff(weekMin, train.CurStop.WeekMin)) /
-                float64(weekMinDiff(train.CurStop.Next.WeekMin, train.CurStop.WeekMin))
+            train.CurProgress = weekMinDiff(weekMinFloat, float64(train.CurStop.WeekMin)) /
+                weekMinDiff(float64(train.CurStop.Next.WeekMin), float64(train.CurStop.WeekMin))
             // Update position
             train.updatePosition()
         }
@@ -214,31 +239,44 @@ func (train *Train) updatePosition() {
     if train.Terminated {
         return
     }
-    line := train.CurStop.Platform.ServiceLine
-    targetDistance := train.CurProgress * line.TotalDistance
+    platform := train.CurStop.Platform
+    nextPlatform := train.CurStop.Next.Platform
+    line := platform.ServiceLine
 
-    distanceTally := 0.0
-    for i := 0; i < len(line.Waypoints)-1; i += 1 {
-        waypoint := line.Waypoints[i]
-        nextWaypoint := line.Waypoints[i+1]
+    // Calc segmentDistance
+    // TODO This can be precalculated
+    var waypoint, nextWaypoint *Waypoint
+    segmentDistance := 0.0
+    for i := platform.Waypoint.Index; i < nextPlatform.Waypoint.Index; i += 1 {
+        waypoint = line.Waypoints[i]
+        nextWaypoint = line.Waypoints[i+1]
+        segmentDistance += waypoint.DistanceTo(nextWaypoint)
+    }
+    targetDistance := segmentDistance*train.CurProgress
+
+    // Figure out what waypoint we're currently headed to
+    runningDistance := 0.0
+    for i := platform.Waypoint.Index; i < nextPlatform.Waypoint.Index; i += 1 {
+        waypoint = line.Waypoints[i]
+        nextWaypoint = line.Waypoints[i+1]
         waypointDistance := waypoint.DistanceTo(nextWaypoint)
-        if distanceTally+waypointDistance >= targetDistance {
-            baseDistance := distanceTally
-            distanceTally += waypointDistance
-            factor := (targetDistance - baseDistance) / (distanceTally - baseDistance)
+        if runningDistance+waypointDistance >= targetDistance {
+            baseDistance := runningDistance
+            runningDistance += waypointDistance
+            factor := (targetDistance - baseDistance) / (runningDistance - baseDistance)
             // TODO This does not take into account Earth curvature
             train.Lat = waypoint.Lat + (nextWaypoint.Lat-waypoint.Lat)*factor
             train.Lon = waypoint.Lon + (nextWaypoint.Lon-waypoint.Lon)*factor
             return
         } else {
-            distanceTally += waypointDistance
+            runningDistance += waypointDistance
         }
     }
 
     // This should not happen
     fmt.Printf("This should not happen\n")
-    train.Lat = train.CurStop.Next.Platform.Waypoint.Lat
-    train.Lon = train.CurStop.Next.Platform.Waypoint.Lon
+    train.Lat = nextPlatform.Waypoint.Lat
+    train.Lon = nextPlatform.Waypoint.Lon
 }
 
 // Dequeue a train from `platform`. Only consider trains that have an
