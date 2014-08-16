@@ -16,22 +16,21 @@
             center: new google.maps.LatLng(40.753985, -74.093723),
             zoom: 13
         });
+        var trains = {};
         setInterval(function() {
-            var trains = {};
             $.getJSON('/railviz', null, function(data) {
                 for (var k in data) if (data.hasOwnProperty(k)) {
                     var id = data[k].Id;
-                    if (!trains.hasOwnProperty(id)) {
+                    if (!trains[id]) {
                         trains[id] = new google.maps.Marker({
                             map: map,
-                            title: data[k].LineName,
-                            clickable: false
+                            title: data[k].LineName
                         });
                     }
-                    trains[id].setPosition({lat: data[k].Lat, lon: data[k].Lon });
+                    trains[id].setPosition({lat: data[k].Lat, lng: data[k].Lon });
                 }
             });
-        }, 5000);
+        }, 2000);
     });
     </script>
   </head>
