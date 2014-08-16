@@ -69,10 +69,10 @@ type StationStop struct {
 
 // A point on a map with pointers to next/prev points
 type Waypoint struct {
-    Lat      float64
-    Lon      float64
-    Platform *StationPlatform
-    Index    int
+    Lat      float64 `json:"lat"`
+    Lon      float64 `json:"lng"`
+    Platform *StationPlatform `json:"-"`
+    Index    int `json:"-"`
 }
 
 // A train

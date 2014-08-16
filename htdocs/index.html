@@ -17,14 +17,34 @@
             zoom: 13
         });
         var trains = {};
+        var lines = {};
+        $.getJSON('/railviz?lines', null, function(data) {
+            for (var k in data) {
+                new google.maps.Polyline({
+                    map: map,
+                    path: data[k].Waypoints,
+                    geodesic: true,
+                    strokeColor: '#' + data[k].Color1,
+                    strokeOpacity: 1,
+                    //strokeWeight: 2,
+                    clickable: false
+                });
+            }
+        });
         setInterval(function() {
             $.getJSON('/railviz', null, function(data) {
-                for (var k in data) if (data.hasOwnProperty(k)) {
+                for (var k in data) {
                     var id = data[k].Id;
                     if (!trains[id]) {
                         trains[id] = new google.maps.Marker({
                             map: map,
-                            title: data[k].LineName
+                            title: data[k].LineName,
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                fillColor: lines[data[k].LineId].Color1,
+                                strokeColor: lines[data[k].LineId].Color2,
+                                fillOpacity: 1
+                            }
                         });
                     }
                     trains[id].setPosition({lat: data[k].Lat, lng: data[k].Lon });
