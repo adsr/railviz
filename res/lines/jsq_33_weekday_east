@@ -2,7 +2,7 @@
     "Name": "Journal Square–33rd (Weekday)",
     "Id": "jsq_33_weekday",
     "Color1": "fbac00",
-    "Color2": "fbac00",
+    "Color2": "111111",
     "Route": [
         "jsq",
         40.723071, -74.053924,

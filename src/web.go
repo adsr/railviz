@@ -33,7 +33,6 @@ func serveTrains(resp http.ResponseWriter, req *http.Request) {
 // Serve lines
 func serveLines(resp http.ResponseWriter, req *http.Request) {
     type sline struct {
-        Id string
         Color1 string
         Color2 string
         ImageURL string
@@ -41,8 +40,7 @@ func serveLines(resp http.ResponseWriter, req *http.Request) {
     }
     slines := make(map[string]sline)
     for _, line := range lines {
-        slines[line.Name] = sline{
-            Id: line.Id,
+        slines[line.Id] = sline{
             Color1: line.Color1,
             Color2: line.Color2,
             ImageURL: fmt.Sprintf("http://dummyimage.com/20/%s/%s.gif&text=%s", line.Color1, line.Color2, line.Id[:1]),

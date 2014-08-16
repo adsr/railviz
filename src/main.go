@@ -309,6 +309,7 @@ func (platform *StationPlatform) PushTrain(train *Train) {
 
 // Get station stop that occur at `weekMin`
 func (line *ServiceLine) GetStationStops(weekMin int) []*StationStop {
+    // TODO trains that start on Fri night should finish even if they go into Sat
     stops := make([]*StationStop, 0)
     for _, stop := range line.StationStops {
         // TODO Sort stops and use binary search

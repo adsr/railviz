@@ -2,7 +2,7 @@
     "Name": "Newark–World Trade Center (Weekday)",
     "Id": "newark_wtc_weekday",
     "Color1": "ff0000",
-    "Color2": "ff0000",
+    "Color2": "111111",
     "Route": [
         "newark",
         "harrison",

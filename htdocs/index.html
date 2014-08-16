@@ -9,16 +9,18 @@
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="http://mohayonao.github.io/timbre.js/timbre.js"></script>
     <script type="text/javascript">
     google.maps.event.addDomListener(window, 'load', function() {
         var map = new google.maps.Map(
             document.getElementById("map-canvas"), {
-            center: new google.maps.LatLng(40.753985, -74.093723),
-            zoom: 13
+            center: new google.maps.LatLng(40.730119, -74.039011),
+            zoom: 12
         });
         var trains = {};
         var lines = {};
         $.getJSON('/railviz?lines', null, function(data) {
+            lines = data;
             for (var k in data) {
                 new google.maps.Polyline({
                     map: map,
@@ -26,7 +28,6 @@
                     geodesic: true,
                     strokeColor: '#' + data[k].Color1,
                     strokeOpacity: 1,
-                    //strokeWeight: 2,
                     clickable: false
                 });
             }
@@ -41,16 +42,40 @@
                             title: data[k].LineName,
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
-                                fillColor: lines[data[k].LineId].Color1,
-                                strokeColor: lines[data[k].LineId].Color2,
-                                fillOpacity: 1
-                            }
+                                fillColor: '#' + lines[data[k].LineId].Color1,
+                                strokeColor: '#' + lines[data[k].LineId].Color2,
+                                strokeWeight: 1,
+                                fillOpacity: 1,
+                                scale: 8,
+                            },
+                            opacity: data[k].Terminated ? 0.5 : 1.0
                         });
+                        trains[id]._Terminated = data[k].Terminated;
                     }
                     trains[id].setPosition({lat: data[k].Lat, lng: data[k].Lon });
+                    if (trains[id]._Terminated != data[k].Terminated) {
+                        trains[id]._Terminated = data[k].Terminated;
+                        trains[id].setOpacity(data[k].Terminated ? 0.5 : 1.0);
+                        playChord(id, true);
+                    } else if (!data[k].Terminated && data[k].CurProgress == 0.0) {
+                        playChord(id, false);
+                    }
                 }
             });
         }, 2000);
+        var playChord = function(id, two) {
+            id = parseInt(id);
+            // D E G A C D
+            var freqs = [293.66, 329.63, 392.00, 440.00, 523.25, 587.33];
+            var freq1 = freqs[id % freqs.length];
+            var freq2 = freqs[(id + 3)  % freqs.length];
+            T('perc', {r: 500},
+                T('sin', {freq: freq1, mul: two ? 0.6 : 0.0}),
+                T('sin', {freq: freq2, mul: 0.4})
+            ).on('ended', function() {
+                this.pause();
+            }).bang().play();
+        };
     });
     </script>
   </head>

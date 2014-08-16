@@ -2,7 +2,7 @@
     "Name": "33rd–Hoboken (Weekday)",
     "Id": "33_hoboken_weekday",
     "Color1": "0088ff",
-    "Color2": "0088ff",
+    "Color2": "eeeeee",
     "Route": [
         "33",
         "23",

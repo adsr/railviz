@@ -2,13 +2,13 @@
     "Name": "Hoboken–World Trade Center (Weekday)",
     "Id": "hoboken_wtc_weekday",
     "Color1": "00c000",
-    "Color2": "00c000",
+    "Color2": "111111",
     "Route": [
         "hoboken",
         40.732739, -74.029501,
         40.731474, -74.032499,
         "newport",
-        40.721294, -74.037262,
+        40.717555, -74.036370,
         "exchange",
         "wtc"
     ],

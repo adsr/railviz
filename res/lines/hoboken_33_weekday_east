@@ -2,7 +2,7 @@
     "Name": "Hoboken–33rd (Weekday)",
     "Id": "hoboken_33_weekday",
     "Color1": "0088ff",
-    "Color2": "0088ff",
+    "Color2": "eeeeee",
     "Route": [
         "hoboken",
         40.732310, -74.029468,
