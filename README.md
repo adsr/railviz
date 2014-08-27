@@ -26,7 +26,7 @@ of application, however, the actual feed published by [PATH] contained bogus
 data. So I ended up copy-pasting timetables into a custom JSON format. (See
 the `res` directory.) This was also more fun.
 
-** Demo **
+**Demo**
 
 http://goo.gl/nT7Ljk
 
