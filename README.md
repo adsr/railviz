@@ -1,13 +1,13 @@
 railviz
 =======
 
-railviz is a rail transit visualization program. Given a set of stations,        
+railviz is a rail transit visualization program. Given a set of stations,
 transit lines, and timetables, railviz will figure out the estimated positions
 of actual trains.
 
 **Structure**
 
-* The `src` directory contains the source code of railviz (Go). railviz        
+* The `src` directory contains the source code of railviz (Go). railviz
 derives train data and serves it via a single HTTP endpoint, formatted in
 JSON.
 * The `res` directory contains definitions of transit lines which are used by
@@ -21,7 +21,7 @@ railviz data and displays trains on a Google Map widget.
 
 I like trains and wanted to visualize them. I was particularly interested in
 deriving the number of trains on a track using only timetable data. After some
-research, I discovered [GTFS], a feed format made specifically for this type   
+research, I discovered [GTFS], a feed format made specifically for this type
 of application, however, the actual feed published by [PATH] contained bogus
 data. So I ended up copy-pasting timetables into a custom JSON format. (See
 the `res` directory.) This was also more fun.
